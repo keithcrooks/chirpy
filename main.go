@@ -1,19 +1,39 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
 
+	"github.com/joho/godotenv"
+	"github.com/keithcrooks/chirpy/internal/database"
 	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
+	db             *database.Queries
 	fileserverHits atomic.Int32
 }
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file: %s", err)
+	}
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
+
+	db, err := sql.Open("postgress", dbURL)
+	if err != nil {
+		log.Fatalf("Error connecting to the database: %s", err)
+	}
+
 	apiCfg := apiConfig{
+		db:             database.New(db),
 		fileserverHits: atomic.Int32{},
 	}
 
