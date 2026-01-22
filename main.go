@@ -27,7 +27,7 @@ func main() {
 		log.Fatal("DB_URL must be set")
 	}
 
-	db, err := sql.Open("postgress", dbURL)
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error connecting to the database: %s", err)
 	}
@@ -47,6 +47,7 @@ func main() {
 		),
 	)
 	mux.HandleFunc("GET /api/healthz", handlerStatus)
+	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
