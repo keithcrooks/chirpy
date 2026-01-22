@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type Chirp struct {
-	Body string `json:"body"`
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
 }
 
 type CleanedChirp struct {
