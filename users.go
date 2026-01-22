@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -20,13 +21,10 @@ type User struct {
 }
 
 func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, req *http.Request) {
-	var user User
-
-	decoder := json.NewDecoder(req.Body)
-
-	if err := decoder.Decode(&user); err != nil {
+	user, err := getUserFromRequest(req)
+	if err != nil {
+		log.Printf("Error getting user from request: %s", err)
 		respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-		return
 	}
 
 	hashedPassword, err := auth.HashPassword(user.Password)
@@ -49,4 +47,59 @@ func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, req *http.Request) {
 	user.Password = ""
 
 	respondWithJSON(w, http.StatusCreated, user)
+}
+
+func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, req *http.Request) {
+	user, err := getUserFromRequest(req)
+	if err != nil {
+		log.Printf("Error getting user from request: %s", err)
+		respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+		return
+	}
+
+	dbUser, err := cfg.db.GetUserByEmail(req.Context(), user.Email)
+	if err != nil {
+		log.Printf("Error getting user from the database: %s", err)
+		switch err {
+		case sql.ErrNoRows:
+			respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
+		default:
+			respondWithError(
+				w,
+				http.StatusInternalServerError,
+				http.StatusText(http.StatusInternalServerError),
+			)
+		}
+		return
+	}
+
+	passwordOk, err := auth.CheckPassword(user.Password, dbUser.HashedPassword)
+	if err != nil {
+		log.Printf("Error checking password: %s", err)
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			http.StatusText(http.StatusInternalServerError),
+		)
+		return
+	}
+
+	if !passwordOk {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
+		return
+	}
+
+	user.Password = ""
+
+	respondWithJSON(w, http.StatusOK, user)
+}
+
+func getUserFromRequest(req *http.Request) (User, error) {
+	var user User
+
+	decoder := json.NewDecoder(req.Body)
+
+	err := decoder.Decode(&user)
+
+	return user, err
 }
