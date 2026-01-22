@@ -20,6 +20,10 @@ type Chirp struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Chirps struct {
+	Entries []Chirp
+}
+
 type ValidResponse struct {
 	Valid bool `json:"valid"`
 }
@@ -37,6 +41,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Reques
 	dbChirp, err := cfg.db.CreateChirp(req.Context(), params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	chirp.ID = dbChirp.ID
@@ -44,6 +49,30 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Reques
 	chirp.UpdatedAt = dbChirp.UpdatedAt
 
 	respondWithJSON(w, http.StatusCreated, chirp)
+}
+
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, req *http.Request) {
+	dbChirps, err := cfg.db.GetAllChirps(req.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Could not get all chirps!")
+		return
+	}
+
+	chirps := Chirps{Entries: []Chirp{}}
+
+	for _, dbChirp := range dbChirps {
+		chirp := Chirp{
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
+			Body:      dbChirp.Body,
+			UserID:    dbChirp.UserID,
+		}
+
+		chirps.Entries = append(chirps.Entries, chirp)
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps.Entries)
 }
 
 func filterChirp(chirp *Chirp) {

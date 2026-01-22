@@ -46,6 +46,7 @@ func main() {
 			apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("."))),
 		),
 	)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetAllChirps)
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 	mux.HandleFunc("GET /api/healthz", handlerStatus)
 	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)
