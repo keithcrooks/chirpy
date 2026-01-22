@@ -6,17 +6,21 @@ import (
 	"net/http"
 )
 
-type chirp struct {
+type Chirp struct {
 	Body string `json:"body"`
 }
 
-type validResponse struct {
+type CleanedChirp struct {
+	CleanedBody string `json:"cleaned_body"`
+}
+
+type ValidResponse struct {
 	Valid bool `json:"valid"`
 }
 
 func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
-	c := chirp{}
+	c := Chirp{}
 	if err := decoder.Decode(&c); err != nil {
 		log.Printf("Error decoding Chirp: %s", err)
 		respondWithError(w, http.StatusBadRequest, "Could not read Chirp")
@@ -28,5 +32,7 @@ func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, validResponse{Valid: true})
+	cleaned := filterChirp(c)
+
+	respondWithJSON(w, http.StatusOK, cleaned)
 }
