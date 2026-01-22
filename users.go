@@ -73,7 +73,7 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	passwordOk, err := auth.CheckPassword(user.Password, dbUser.HashedPassword)
+	passwordOk, err := auth.CheckPasswordHash(user.Password, dbUser.HashedPassword)
 	if err != nil {
 		log.Printf("Error checking password: %s", err)
 		respondWithError(
