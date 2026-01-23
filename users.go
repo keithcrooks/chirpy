@@ -13,11 +13,29 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password,omitempty"`
+	ID               uuid.UUID `json:"id"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	Email            string    `json:"email"`
+	Password         string    `json:"password,omitempty"`
+	ExpiresInSeconds int       `json:"expires_in_seconds,omitempty"`
+	Token            string    `json:"token,omitempty"`
+}
+
+func (u User) getExpiresInDuration() time.Duration {
+	expiresInHour := time.Hour
+
+	if u.ExpiresInSeconds <= 0 {
+		return expiresInHour
+	}
+
+	expiresInSeconds := time.Second * time.Duration(u.ExpiresInSeconds)
+
+	if expiresInSeconds < expiresInHour {
+		return expiresInSeconds
+	}
+
+	return expiresInHour
 }
 
 func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, req *http.Request) {
@@ -89,7 +107,17 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	token, err := auth.MakeJWT(dbUser.ID, cfg.tokenSecret, user.getExpiresInDuration())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error creating auth token")
+		return
+	}
+
+	user.ID = dbUser.ID
+	user.CreatedAt = dbUser.CreatedAt
+	user.UpdatedAt = dbUser.UpdatedAt
 	user.Password = ""
+	user.Token = token
 
 	respondWithJSON(w, http.StatusOK, user)
 }

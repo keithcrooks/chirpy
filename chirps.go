@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/keithcrooks/chirpy/internal/auth"
 	"github.com/keithcrooks/chirpy/internal/database"
 )
 
@@ -32,7 +33,28 @@ type ValidResponse struct {
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Request) {
 	chirp, err := validateChirp(req)
 	if err != nil {
+		log.Printf("Error validating Chirp: %v", err)
 		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Printf("Error getting Bearer token: %v", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid bearer token")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
+	if err != nil {
+		log.Printf("Error validating JWT: %v", err)
+		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return
+	}
+
+	if userID != chirp.UserID {
+		log.Printf("Unauthorized user %s attempted to Chirp as %s", userID, chirp.UserID)
+		respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 		return
 	}
 
