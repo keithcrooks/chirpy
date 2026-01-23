@@ -1,7 +1,11 @@
 package auth
 
 import (
+	"crypto/rand"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestCheckPasswordHash(t *testing.T) {
@@ -63,6 +67,64 @@ func TestCheckPasswordHash(t *testing.T) {
 			}
 			if !tt.wantErr && match != tt.matchPassword {
 				t.Errorf("CheckPasswordHash() expects %v, got %v", tt.matchPassword, match)
+			}
+		})
+	}
+}
+
+func TestValidateJWT(t *testing.T) {
+	tokenSecret := rand.Text()
+	userId1 := uuid.New()
+	userId2 := uuid.New()
+	token1, _ := MakeJWT(userId1, tokenSecret, time.Hour*24)
+	token2, _ := MakeJWT(userId2, tokenSecret, time.Hour*24)
+
+	tests := []struct {
+		name        string
+		userID      uuid.UUID
+		token       string
+		wantErr     bool
+		matchUserID bool
+	}{
+		{
+			name:        "Valid token",
+			userID:      userId1,
+			token:       token1,
+			wantErr:     false,
+			matchUserID: true,
+		},
+		{
+			name:        "Invalid token",
+			userID:      userId1,
+			token:       "ThisIsNotARealToken",
+			wantErr:     true,
+			matchUserID: false,
+		},
+		{
+			name:        "Invalid token for user",
+			userID:      userId1,
+			token:       token2,
+			wantErr:     false,
+			matchUserID: false,
+		},
+		{
+			name:        "Empty token",
+			userID:      userId1,
+			token:       "",
+			wantErr:     true,
+			matchUserID: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := ValidateJWT(test.token, tokenSecret)
+			if (err != nil) != test.wantErr {
+				t.Errorf("ValidateJWT() error = %v, wantErr %v", err, test.wantErr)
+			}
+
+			if !test.wantErr && test.matchUserID && result != test.userID {
+				t.Errorf("ValidateJWT() expects %v, got %v", test.userID, result)
 			}
 		})
 	}
