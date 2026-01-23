@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	db             *database.Queries
 	fileserverHits atomic.Int32
+	tokenSecret    string
 }
 
 func main() {
@@ -32,9 +33,15 @@ func main() {
 		log.Fatalf("Error connecting to the database: %s", err)
 	}
 
+	tokenSecret := os.Getenv("TOKEN_SECRET")
+	if tokenSecret == "" {
+		log.Fatal("TOKEN_SECRET must be set")
+	}
+
 	apiCfg := apiConfig{
 		db:             database.New(db),
 		fileserverHits: atomic.Int32{},
+		tokenSecret:    tokenSecret,
 	}
 
 	mux := http.NewServeMux()
