@@ -2,6 +2,8 @@ package auth
 
 import (
 	"crypto/rand"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -70,6 +72,51 @@ func TestCheckPasswordHash(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	t.Run("Bearer token exist", func(t *testing.T) {
+		userID := uuid.New()
+		tokenSecret := rand.Text()
+		token, _ := MakeJWT(userID, tokenSecret, time.Hour*24)
+		headers := http.Header{}
+		headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		actual, err := GetBearerToken(headers)
+
+		if err != nil {
+			t.Errorf("Got unexpected error: %v", err)
+		}
+
+		if actual != token {
+			t.Errorf("GetBearerToken() expects %v got %v", token, actual)
+		}
+	})
+
+	t.Run("Authorization header does not exist", func(t *testing.T) {
+		headers := http.Header{}
+
+		_, err := GetBearerToken(headers)
+
+		expected := "authorization header not set"
+
+		if err == nil || err.Error() != expected {
+			t.Errorf("GetBearerToken() expected error %v but got %v", expected, err)
+		}
+	})
+
+	t.Run("Invalid Authorization value", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Set("Authorization", "This is not a valid Bearer Token...")
+
+		_, err := GetBearerToken(headers)
+
+		expected := "token not found"
+
+		if err == nil || err.Error() != expected {
+			t.Errorf("GetBearerToken() expected error %v but got %v", expected, err)
+		}
+	})
 }
 
 func TestValidateJWT(t *testing.T) {
