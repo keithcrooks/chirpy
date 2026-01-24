@@ -45,15 +45,9 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
+	chirp.UserID, err = auth.ValidateJWT(token, cfg.tokenSecret)
 	if err != nil {
 		log.Printf("Error validating JWT: %v", err)
-		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-		return
-	}
-
-	if userID != chirp.UserID {
-		log.Printf("Unauthorized user %s attempted to Chirp as %s", userID, chirp.UserID)
 		respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 		return
 	}
