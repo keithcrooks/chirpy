@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -137,6 +138,9 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, req *http.Reque
 		chirps.Entries = append(chirps.Entries, chirp)
 	}
 
+	sort := req.URL.Query().Get("sort")
+	chirps.Entries = sortChirps(chirps.Entries, sort)
+
 	respondWithJSON(w, http.StatusOK, chirps.Entries)
 }
 
@@ -216,6 +220,16 @@ func isProfane(word string) bool {
 	}
 
 	return false
+}
+
+func sortChirps(chirps []Chirp, sort string) []Chirp {
+	if strings.ToLower(sort) == "desc" {
+		slices.SortFunc(chirps, func(a, b Chirp) int {
+			return b.CreatedAt.Compare(a.CreatedAt)
+		})
+	}
+
+	return chirps
 }
 
 func validateChirp(req *http.Request) (Chirp, error) {
