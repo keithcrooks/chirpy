@@ -160,6 +160,48 @@ func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, req *http.Request) {
 	respondWithJSON(w, http.StatusNoContent, nil)
 }
 
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, req *http.Request) {
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Printf("Error getting getting bearer token: %v", err)
+		respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.tokenSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+		return
+	}
+
+	user, err := getUserFromRequest(req)
+	if err != nil {
+		log.Printf("Error getting user from request: %s", err)
+		respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		log.Printf("Error hashing password: %s", err)
+		respondWithError(w, http.StatusInternalServerError, "Could not hash password")
+		return
+	}
+
+	params := database.UpdateUserEmailAndPasswordParams{Email: user.Email, HashedPassword: hashedPassword, ID: userID}
+	dbUser, err := cfg.db.UpdateUserEmailAndPassword(req.Context(), params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error updating user record")
+		return
+	}
+
+	user.ID = dbUser.ID
+	user.CreatedAt = dbUser.CreatedAt
+	user.UpdatedAt = dbUser.UpdatedAt
+
+	respondWithJSON(w, http.StatusOK, user)
+}
+
 func getUserFromRequest(req *http.Request) (User, error) {
 	var user User
 
