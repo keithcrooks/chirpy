@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -114,9 +115,11 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, req *http.Reques
 }
 
 func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, req *http.Request) {
-	dbChirps, err := cfg.db.GetAllChirps(req.Context())
+	authorID := req.URL.Query().Get("author_id")
+
+	dbChirps, err := cfg.getChirps(req.Context(), authorID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not get all chirps!")
+		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -170,6 +173,20 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, req *http.Request) 
 	}
 
 	respondWithJSON(w, http.StatusOK, chirp)
+}
+
+func (cfg *apiConfig) getChirps(ctx context.Context, authorID string) ([]database.Chirp, error) {
+	if authorID == "" {
+		return cfg.db.GetAllChirps(ctx)
+	}
+
+	authorUUID, err := uuid.Parse(authorID)
+	if err != nil {
+		log.Printf("Error parsing author ID: %v", err)
+		return nil, errors.New("invalid author ID")
+	}
+
+	return cfg.db.GetAllChirpsByAuthor(ctx, authorUUID)
 }
 
 func filterChirp(chirp *Chirp) {
