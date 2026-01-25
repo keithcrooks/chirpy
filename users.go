@@ -20,6 +20,7 @@ type User struct {
 	Password     string    `json:"password,omitempty"`
 	Token        string    `json:"token,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, req *http.Request) {
@@ -47,6 +48,7 @@ func (cfg *apiConfig) handlerAddUser(w http.ResponseWriter, req *http.Request) {
 	user.CreatedAt = dbUser.CreatedAt
 	user.UpdatedAt = dbUser.UpdatedAt
 	user.Password = ""
+	user.IsChirpyRed = dbUser.IsChirpyRed
 
 	respondWithJSON(w, http.StatusCreated, user)
 }
@@ -111,6 +113,7 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, req *http.Request)
 	user.Password = ""
 	user.Token = token
 	user.RefreshToken = refreshToken
+	user.IsChirpyRed = dbUser.IsChirpyRed
 
 	respondWithJSON(w, http.StatusOK, user)
 }
