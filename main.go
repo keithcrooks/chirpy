@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	db             *database.Queries
 	fileserverHits atomic.Int32
+	polkaKey       string
 	tokenSecret    string
 }
 
@@ -38,9 +39,15 @@ func main() {
 		log.Fatal("TOKEN_SECRET must be set")
 	}
 
+	polkaKey := os.Getenv("POLKA_KEY")
+	if tokenSecret == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
+
 	apiCfg := apiConfig{
 		db:             database.New(db),
 		fileserverHits: atomic.Int32{},
+		polkaKey:       polkaKey,
 		tokenSecret:    tokenSecret,
 	}
 

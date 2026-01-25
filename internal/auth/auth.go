@@ -21,6 +21,20 @@ func CheckPasswordHash(password, hash string) (bool, error) {
 	return argon2id.ComparePasswordAndHash(password, hash)
 }
 
+func GetAPIKey(headers http.Header) (string, error) {
+	auth := headers.Get("Authorization")
+	if auth == "" {
+		return "", errors.New("authorization header not set")
+	}
+
+	apiKey := strings.TrimPrefix(auth, "ApiKey ")
+	if apiKey == auth {
+		return "", errors.New("API Key not found")
+	}
+
+	return apiKey, nil
+}
+
 func GetBearerToken(headers http.Header) (string, error) {
 	auth := headers.Get("Authorization")
 	if auth == "" {
